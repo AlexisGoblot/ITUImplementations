@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 import matplotlib.pyplot as plt
 import numpy as np
+from PIL import Image
+import io
 
 class Model:
     """
@@ -131,6 +133,36 @@ class Model:
         plt.xscale(self.xscale)
         plt.yscale(self.yscale)
         return figure
+
+    def get_image(self) -> Image:
+        """
+        get the internal figure as an Image object
+
+        Unitary tests:
+
+        >>> model = Model(id, "title", "xlabel", "ylabel")
+        >>> model.get_image()
+        Traceback (most recent call last):
+          ...
+        TypeError: Figure pas encore initialisée, il n'y a rien à afficher
+
+        Returns
+        -------
+        im : PIL.Image
+            the internal figure as an Image object
+
+        """
+
+        if self.figure is None:
+            raise TypeError("Figure pas encore initialisée, il n'y a rien à afficher")
+
+        plt.figure(self.figure.number)
+        buf = io.BytesIO()
+        plt.savefig(buf, format='png')
+        buf.seek(0)
+        im = Image.open(buf)
+        buf.close()
+        return im
         
         
 class ITU:
