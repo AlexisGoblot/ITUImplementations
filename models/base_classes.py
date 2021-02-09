@@ -4,10 +4,12 @@ import numpy as np
 from PIL import Image
 import io
 
+
 class Model:
     """
     Class used to represent a Model with its figure
     """
+
     def __init__(self, model_function, title, xlabel, ylabel, xscale="linear", yscale="linear", xlim=None, ylim=None):
         self.model_function = model_function
         self.title = title
@@ -19,7 +21,6 @@ class Model:
         self.ylim = ylim
         self.figure = None
 
-    
     def plot(self, x, y, label):
         """
         plot on the figure of the Model object
@@ -29,16 +30,15 @@ class Model:
         None.
 
         """
-        
-        #delaying the figure creation to avoid additional bugged figures
+
+        # delaying the figure creation to avoid additional bugged figures
         if self.figure is None:
             self.figure = self.init_figure()
         else:
             plt.figure(self.figure.number)
-            
-        plt.plot(x ,y ,label=label)
-       
-        
+
+        plt.plot(x, y, label=label)
+
     def show(self):
         """
         show the figure of the class object
@@ -56,14 +56,13 @@ class Model:
         None.
 
         """
-        
+
         if self.figure is None:
             raise TypeError("Figure pas encore initialisée, il n'y a rien à afficher")
         plt.figure(self.figure.number)
         plt.legend()
         plt.show()
-       
-        
+
     def clear(self):
         """
         Reset the figure of the Model object
@@ -74,7 +73,7 @@ class Model:
 
         """
         self.figure = self.init_figure()
-        
+
     def evaluate(self, *args, **kwargs) -> (np.array, np.array, str):
         """
         Evaluate the model in self.model_function.
@@ -98,17 +97,16 @@ class Model:
 
         """
         plot = False
-        
+
         if "plot" in kwargs and kwargs["plot"]:
             plot = True
             del kwargs["plot"]
-            
+
         x, y, label = self.model_function(*args, **kwargs)
         if plot:
             self.plot(x, y, label=label)
         return x, y, label
-    
-    
+
     def init_figure(self):
         """
         Function used to initialise the internal Figure object of 
@@ -126,10 +124,10 @@ class Model:
         plt.title(self.title)
         if not self.xlim is None:
             plt.xlim(self.xlim)
-        
+
         if not self.ylim is None:
             plt.ylim(self.ylim)
-        
+
         plt.xscale(self.xscale)
         plt.yscale(self.yscale)
         return figure
@@ -161,10 +159,11 @@ class Model:
         plt.savefig(buf, format='png')
         buf.seek(0)
         im = Image.open(buf)
+        im2 = im.copy()
         buf.close()
         return im
-        
-        
+
+
 class ITU:
     """
     unitary test:
@@ -175,19 +174,21 @@ class ITU:
     >>> str(itu)
     'Recommandation ITU 1: nom'
     """
-    def __init__(self, name, ITU_number, tags):
+
+    def __init__(self, name, ITU_number, tags, model_amount=0):
         self.name = name
         self.ITU_number = ITU_number
         self.tags = tags
-        
-        
+        self.model_amount = model_amount
+
     def __repr__(self):
         return (f"Recommandation ITU {self.ITU_number}: {self.name}")
-    
-    
+
     def __str__(self):
         return self.__repr__()
-    
+
+
 if __name__ == "__main__":
     from doctest import testmod
+
     testmod(verbose=True)
