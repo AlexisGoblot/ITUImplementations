@@ -3,16 +3,17 @@ import numpy as np
 import scipy.stats as st
 from base_classes import ITU, Model
 
-def cotg(X):
-    return np.cos(X)/np.sin(X)
-      
-    
-class ITU_2108(ITU):
+
+def cotg(x):
+    return np.cos(x) / np.sin(x)
+
+
+class ITU2108(ITU):
     """
     
     Unitary test:
         
-    >>> itu = ITU_2108()
+    >>> itu = ITU2108()
     >>> itu.models[1].show()
     Traceback (most recent call last):
     ...
@@ -43,36 +44,37 @@ class ITU_2108(ITU):
     ValueError: la fréquence doit être comprise entre 10 et 100 GHz
     
     """
+
     def __init__(self):
         name = "Prévision de l'affaiblissement dû à des groupes d'obstacles"
         ITU_number = 2108
         tags = ["affaiblissement", "obstacles"]
-        ITU.__init__(self,name, ITU_number, tags)
-        
-        #statistic laws used in model_2 and model_3
+        ITU.__init__(self, name, ITU_number, tags)
+
+        # statistic laws used in model_2 and model_3
         self.N = st.norm()
         self.Q = self.N.isf
-        
-        self.models = { 1 : Model(self.model_1,
-                                  "Modèle de correction de la hauteur en fonction du gain du terminal",
-                                   "Hauteur d'antenne (m)",
-                                   "Affaiblissement supplémentaire (dB)"),
-                       
-                        2 : Model(self.model_2,
-                                  "Modèle statistique de l'affaiblissement dû à un groupe\nd'obstacles pour des trajets de Terre",
-                                  "distance (km)",
-                                  "valeur médiane des affaiblissements (dB)",
-                                  xscale = "log"),
-                        
-                        3 : Model(self.model_3,
-                                  "Modèle statistique d'affaiblissement dû à un groupe d'obstacles \npour un trajet Terre-espace et pour les services aéronautiques",
-                                  "Lces (dB)",
-                                  "Pourcentage d'emplacements",
-                                  xlim=(-5, 70))
+
+        self.models = {1: Model(self.model_1,
+                                "Modèle de correction de la hauteur en fonction du gain du terminal",
+                                "Hauteur d'antenne (m)",
+                                "Affaiblissement supplémentaire (dB)"),
+
+                       2: Model(self.model_2,
+                                "Modèle statistique de l'affaiblissement dû à un groupe\nd'obstacles pour des trajets de Terre",
+                                "distance (km)",
+                                "valeur médiane des affaiblissements (dB)",
+                                xscale="log"),
+
+                       3: Model(self.model_3,
+                                "Modèle statistique d'affaiblissement dû à un groupe d'obstacles \npour un trajet Terre-espace et pour les services aéronautiques",
+                                "Lces (dB)",
+                                "Pourcentage d'emplacements",
+                                xlim=(-5, 70))
                        }
-        
-        
-    def model_1(self, R: int, equation_2b: bool, env: str, f: float = 1.5, ws: int = 27, h_size: int = 1000) -> (np.array, np.array, str):
+
+    def model_1(self, R: int, equation_2b: bool, env: str, f: float = 1.5, ws: int = 27, h_size: int = 1000) -> (
+    np.array, np.array, str):
         """
         First model described in the ITU 2108 description.
 
@@ -109,7 +111,7 @@ class ITU_2108(ITU):
         f_min, f_max = 0.03, 3
         if f < f_min or f > f_max:
             raise ValueError(f"la fréquence doit être comprise entre {f_min} et {f_max} GHz")
-        
+
         h = np.linspace(R, 100, 1000)
 
         h_diff = R - h
@@ -118,18 +120,17 @@ class ITU_2108(ITU):
         v = K_nu * (h_diff * theta_clut) ** 0.5
         J = 6.9 + 20 * np.log10(((v - 0.1) ** 2 + 1) ** 0.5 + v - 0.1)
         K_h2 = 21.8 + 6.2 * np.log10(f)
-        
+
         if not equation_2b:
             A_h = J - 6.03
         else:
             A_h = - K_h2 * np.log(h / R)
-    
+
         label = f"{env}: R = {R}m, f = {f}GHz"
-        
+
         return h, A_h, label
-        
-        
-    def model_2(self, f:int=30, d_size:int=1000, correction_one_side:bool = False) -> (np.array, np.array, str):
+
+    def model_2(self, f: int = 30, d_size: int = 1000, correction_one_side: bool = False) -> (np.array, np.array, str):
         """
         Second model of the ITU 2108 Description
 
@@ -158,27 +159,26 @@ class ITU_2108(ITU):
             name of the curve.
 
         """
-        
-        #check if the parameters are in the validity range of the model
+
+        # check if the parameters are in the validity range of the model
         f_min, f_max = 2, 67
         if f < f_min or f > f_max:
             raise ValueError(f"la fréquence doit être comprise entre {f_min} et {f_max} GHz")
-        
+
         d_min = 0.25 if correction_one_side else 1
-        
-        d = np.linspace(d_min,100,d_size)
-        #value to get median curves
+
+        d = np.linspace(d_min, 100, d_size)
+        # value to get median curves
         p = 0.5
-    
+
         Ll = 23.5 + 9.6 * np.log10(f)
         Ls = 32.98 + 23.9 * np.log10(d) + 3 * np.log10(f)
         Lctt = -5 * np.log10(10 ** (-0.2 * Ll) + 10 ** (-0.2 * Ls)) - 6 * self.Q(p)
-        
+
         label = f"{f} GHz"
-        
+
         return d, Lctt, label
-    
-    
+
     def model_3(self, theta: int = 10, f: int = 30, p_size: int = 100) -> (np.array, np.array, str):
         """
         Third model of the ITU 2108 specification.
@@ -207,58 +207,60 @@ class ITU_2108(ITU):
             label of the curve.
 
         """
-        
-        #check if the parameters are in the validity range of the model
+
+        # check if the parameters are in the validity range of the model
         f_min, f_max = 10, 100
         if f < f_min or f > f_max:
             raise ValueError(f"la fréquence doit être comprise entre {f_min} et {f_max} GHz")
-        
+
         theta_min, theta_max = 0, 90
         if theta < 0 or theta > 90:
             raise ValueError(f"l'angle théta doit être compris entre {theta_min} et {theta_max}°")
-            
-        #params defined for the model
+
+        # params defined for the model
         p = np.linspace(0, 1, p_size)
-        K1 = 93*(f**0.175)
+        K1 = 93 * (f ** 0.175)
         A1 = 0.05
 
-        #params used for readability
-        a = (A1 * ((90 - theta)/90) + np.pi * theta / 180 )
-        b = 0.5*(90-theta)/90
-        
-        #compute the resulting pdf
-        LCES = (-K1 * np.log( 1 - p) * cotg(a)) ** b - 1 - 0.6 * self.Q(p)
-        
-        label=f"f={f}GHz et {theta}°"
-        
+        # params used for readability
+        a = (A1 * ((90 - theta) / 90) + np.pi * theta / 180)
+        b = 0.5 * (90 - theta) / 90
+
+        # compute the resulting pdf
+        LCES = (-K1 * np.log(1 - p) * cotg(a)) ** b - 1 - 0.6 * self.Q(p)
+
+        label = f"f={f}GHz et {theta}°"
+
         return LCES, 100 * p, label
 
-        
+
 if __name__ == "__main__":
-    
-    #ignore runtime warnings throwns by numpy
+
+    # ignore runtime warnings throwns by numpy
     import warnings
+
     warnings.filterwarnings("ignore", category=RuntimeWarning)
-    
-    #launch unitary tests
+
+    # launch unitary tests
     from doctest import testmod
+
     testmod(verbose=True)
     # class instantiation
-    itu = ITU_2108()
-    
+    itu = ITU2108()
+
     # use the 3rd model
     mod3 = itu.models[3]
     for x in range(0, 91, 10):
-        mod3.evaluate(theta = x, plot = True)
+        mod3.evaluate(theta=x, plot=True)
     mod3.show()
-    
+
     # use the 2nd model
     mod2 = itu.models[2]
-    Lfreq = [2,3,6,16,40,67] #GHz
+    Lfreq = [2, 3, 6, 16, 40, 67]  # GHz
     for f in Lfreq:
-        mod2.evaluate(f = f, correction_one_side = True, plot = True)
+        mod2.evaluate(f=f, correction_one_side=True, plot=True)
     mod2.show()
-    
+
     # use the first model
     mod1 = itu.models[1]
     R_dict = {
@@ -268,9 +270,9 @@ if __name__ == "__main__":
         "Zone urbaine/boisée/forêt": (15, False),
         "Zone urbaine dense": (20, False)
     }
-    
+
     for key, value in R_dict.items():
-        mod1.evaluate(value[0], value[1], key, f = 2, plot = True)
+        mod1.evaluate(value[0], value[1], key, f=2, plot=True)
     mod1.show()
-    
-    #todo: verify model #1
+
+    # todo: verify model #1
