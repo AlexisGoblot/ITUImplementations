@@ -9,7 +9,6 @@ class ITU2402(ITU):
         tags = ["clutter loss", "earth-space paths", "statistics"]
         ITU.__init__(self, name, ITU_number, tags)
 
-
     def model(self):
         pass
 

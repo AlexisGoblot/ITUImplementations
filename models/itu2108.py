@@ -124,7 +124,7 @@ class ITU2108(ITU):
         if not equation_2b:
             A_h = J - 6.03
         else:
-            A_h = - K_h2 * np.log(h / R)
+            A_h = - K_h2 * np.log10(h / R)
 
         label = f"{env}: R = {R}m, f = {f}GHz"
 
