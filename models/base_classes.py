@@ -159,7 +159,6 @@ class Model:
         plt.savefig(buf, format='png')
         buf.seek(0)
         im = Image.open(buf)
-        im2 = im.copy()
         buf.close()
         return im
 
