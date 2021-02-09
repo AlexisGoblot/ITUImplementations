@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import scipy.stats as st
-from base_classes import ITU, Model
+from .base_classes import ITU, Model
 
 
 def cotg(x):

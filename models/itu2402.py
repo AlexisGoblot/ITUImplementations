@@ -1,4 +1,4 @@
-from base_classes import ITU, Model
+from .base_classes import ITU, Model
 
 
 class ITU2402(ITU):
