@@ -10,7 +10,8 @@ class Model:
     Class used to represent a Model with its figure
     """
 
-    def __init__(self, model_function, title, xlabel, ylabel, xscale="linear", yscale="linear", xlim=None, ylim=None):
+    def __init__(self, model_function, title, xlabel, ylabel, parameters_desc, xscale="linear", yscale="linear",
+                 xlim=None, ylim=None):
         self.model_function = model_function
         self.title = title
         self.xlabel = xlabel
@@ -20,6 +21,24 @@ class Model:
         self.xlim = xlim
         self.ylim = ylim
         self.figure = None
+        self.parameters_desc = self.check_param(parameters_desc)  # dict name <-> (value, type, type of parameter)
+
+    def check_param(self, parameters_desc):
+        errored_params = []
+        for k, v in parameters_desc.items():
+
+            # check for fixed length
+            if len(v) != 3:
+                errored_params.append(k)
+                continue
+
+            # check for correct parameter type
+            if not isinstance(v[0], v[1]):
+                errored_params.append(k)
+
+        if len(errored_params) != 0:
+            raise TypeError(f'parameters {", ".join(errored_params)} are wrongly set')
+        return parameters_desc
 
     def plot(self, x, y, label):
         """
@@ -155,12 +174,14 @@ class Model:
             raise TypeError("Figure pas encore initialisée, il n'y a rien à afficher")
 
         plt.figure(self.figure.number)
+        plt.legend()
         buf = io.BytesIO()
         plt.savefig(buf, format='png')
         buf.seek(0)
         im = Image.open(buf)
+        im2 = im.copy()  # to avoid the 'ValueError: I/O operation on closed file' later
         buf.close()
-        return im
+        return im2
 
 
 class ITU:
@@ -181,7 +202,7 @@ class ITU:
         self.model_amount = model_amount
 
     def __repr__(self):
-        return (f"Recommandation ITU {self.ITU_number}: {self.name}")
+        return f"Recommandation ITU {self.ITU_number}: {self.name}"
 
     def __str__(self):
         return self.__repr__()

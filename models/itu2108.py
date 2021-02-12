@@ -49,32 +49,55 @@ class ITU2108(ITU):
         name = "Prévision de l'affaiblissement dû à des groupes d'obstacles"
         ITU_number = 2108
         tags = ["affaiblissement", "obstacles"]
-        ITU.__init__(self, name, ITU_number, tags)
+        ITU.__init__(self, name, ITU_number, tags, model_amount=3)
 
         # statistic laws used in model_2 and model_3
         self.N = st.norm()
         self.Q = self.N.isf
+        self.param_model_1 = {
+            "R": (0, int, "mandatory"),
+            "equation_2b": (False, bool, "mandatory"),
+            "env": ("", str, "mandatory"),
+            "f": (1.5, float, "optional"),
+            "ws": (27, int, "optional"),
+            "h_size": (1000, int, "optional")
+        }
+
+        self.param_model_2 = {
+            "f": (30, int, "optional"),
+            "d_size": (1000, int, "optional"),
+            "correction_one_side": (False, bool, "optional")
+        }
+
+        self.param_model_3 = {
+            "theta": (10, int, "optional"),
+            "f": (30, int, "optional"),
+            "p_size": (100, int, "optional")
+        }
 
         self.models = {1: Model(self.model_1,
                                 "Modèle de correction de la hauteur en fonction du gain du terminal",
                                 "Hauteur d'antenne (m)",
-                                "Affaiblissement supplémentaire (dB)"),
+                                "Affaiblissement supplémentaire (dB)",
+                                self.param_model_1),
 
                        2: Model(self.model_2,
                                 "Modèle statistique de l'affaiblissement dû à un groupe\nd'obstacles pour des trajets de Terre",
                                 "distance (km)",
                                 "valeur médiane des affaiblissements (dB)",
+                                self.param_model_2,
                                 xscale="log"),
 
                        3: Model(self.model_3,
                                 "Modèle statistique d'affaiblissement dû à un groupe d'obstacles \npour un trajet Terre-espace et pour les services aéronautiques",
                                 "Lces (dB)",
                                 "Pourcentage d'emplacements",
+                                self.param_model_3,
                                 xlim=(-5, 70))
                        }
 
     def model_1(self, R: int, equation_2b: bool, env: str, f: float = 1.5, ws: int = 27, h_size: int = 1000) -> (
-    np.array, np.array, str):
+            np.array, np.array, str):
         """
         First model described in the ITU 2108 description.
 
@@ -112,7 +135,7 @@ class ITU2108(ITU):
         if f < f_min or f > f_max:
             raise ValueError(f"la fréquence doit être comprise entre {f_min} et {f_max} GHz")
 
-        h = np.linspace(R, 100, 1000)
+        h = np.linspace(R, 100, h_size)
 
         h_diff = R - h
         theta_clut = np.arctan(h_diff / ws)
