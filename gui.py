@@ -328,14 +328,4 @@ class Gui:
 
 if __name__ == "__main__":
     a = Gui("gui", maximised=False)
-    # model = itu_dict["itu2108"].models[2]
-    # x = model.evaluate(plot=True, f=30)
-    # im = model.get_image()
-    # # im.show()
-    # main = tk.Tk()
-    # c = tk.Canvas(master=main)
-    # print(im.size)
-    # i = ImageTk.PhotoImage(image=im)
-    # c.create_image((i.width(), i.height()), image=i)
-    # c.grid()
-    # main.mainloop()
+
