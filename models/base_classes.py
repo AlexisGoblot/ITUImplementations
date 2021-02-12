@@ -24,6 +24,7 @@ class Model:
         self.parameters_desc = self.check_param(parameters_desc)  # dict name <-> (value, type, type of parameter)
 
     def check_param(self, parameters_desc):
+        """method to check if the default parameter description has no issue when a Model object is instanciated"""
         errored_params = []
         for k, v in parameters_desc.items():
 
@@ -36,6 +37,7 @@ class Model:
             if not isinstance(v[0], v[1]):
                 errored_params.append(k)
 
+        # if at least one parameter is errored
         if len(errored_params) != 0:
             raise TypeError(f'parameters {", ".join(errored_params)} are wrongly set')
         return parameters_desc

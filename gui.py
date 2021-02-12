@@ -11,7 +11,6 @@ from models.base_classes import ITU, Model
 
 # ignore runtime warnings throwns by numpy
 import warnings
-
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 # locating the path of the subpackage models
@@ -42,9 +41,11 @@ class CustomWidget:
         self.image = None
 
     def grid(self, **kwargs):
+        """generic method to mimicate the grid method of the child widgets"""
         self.frame.grid(**kwargs)
 
     def grid_forget(self):
+        """generic method to mimicate the grid_forget method of the child widget"""
         self.frame.grid_forget()
 
 
@@ -88,20 +89,19 @@ class SearchZone(CustomWidget):
         self.lb_itu.grid(row=1, column=0)
 
     def filter_itu(self, *args):
-
+        """method used when the entry box for the research is updated"""
         self.itu_list_display = list(filter(self.f, self.itu_list))
         self.populate_lb_itu()
 
     def populate_lb_itu(self):
-
+        """method used to delete and repopulate the list of all the itu models availiable"""
         self.lb_itu.delete(0, tk.END)
         for x in self.itu_list_display:
             self.lb_itu.insert(tk.END, x)
 
     def _on_listbox_select(self, event: tk.Event):
+        """method called when the user click on a listbox"""
         widget = event.widget  # current listbox
-
-        print(widget, self.lb_itu)
         selection = widget.curselection()
 
         # do stuff only if the event is fired by the listbox of this widget
@@ -142,11 +142,13 @@ class DisplayZone(CustomWidget):
         # keeping track of the current itu model
         self.current_itu_model: Model = None
 
+        # keeping track of the current displayed image
         self.current_image: ImageTk.PhotoImage = None
-        self.im: Image = None
 
-        # definiton of the widgets
+        # definiton of the area holding the image
         self.canvas = tk.Canvas(self.frame, width=640, height=480)
+
+        # definition of the buttons
         self.btn_draw = tk.Button(self.frame, text="Draw", command=self.draw)
         self.btn_clear = tk.Button(self.frame, text="Clear", command=self.clear)
 
@@ -159,12 +161,15 @@ class DisplayZone(CustomWidget):
         self.label_parameters.grid(row=0, column=1)
 
     def _on_listbox_select(self, event: tk.Event):
-        print("event fired _display")
-        print(event.widget, self.lb_model)
+        """method called when the user click on a listbox"""
+
+        # if the listbox is not the one listing the model list (ie. the one to pick the itu models in SearchZone),
+        # updating the listbox listing the model list
         if not event.widget is self.lb_model:
             self.lb_model.delete(0, tk.END)
             for x in range(self.get_itu_command().model_amount):
                 self.lb_model.insert(tk.END, str(x + 1))
+        # if the listbox is the one listing the model list: updating the model
         else:
             sel = self.lb_model.curselection()[0]  # only one value in browse mode
             # itu model index starts at 1
@@ -172,6 +177,7 @@ class DisplayZone(CustomWidget):
             self.update(self.current_itu_model.parameters_desc)
 
     def update(self, parameters_desc):
+        """method updating the dynamic widgets for the model parameters"""
         # removing any previous params from another model
         if len(self.current_param_labels) != 0:
             [x.grid_forget() for x in self.current_param_labels + self.current_param_widgets]
@@ -187,7 +193,8 @@ class DisplayZone(CustomWidget):
             curr_variable = None
             curr_label = tk.Label(self.frame, text=k)
 
-            if v[1] is int or v[1] is float or v[1] is str:
+            # autodetect the correct widget type
+            if v[1] in [int, float, str]:
                 curr_variable = tk.StringVar(self.frame)
                 if v[2] == "optional":
                     curr_variable.set(str(v[0]))
@@ -202,42 +209,49 @@ class DisplayZone(CustomWidget):
             # displaying the current widget and its label
             curr_label.grid(row=self.row_index, column=self.column_index, sticky="wens")
             curr_widget.grid(row=self.row_index + 1, column=self.column_index, sticky="wens")
-            if k == "h_size":
-                print(self.row_index)
 
+            # make the grid manager return at the next "line" when the column parameter reach a certain value
             if self.column_index == self.MAX_PARAM_COLUMNS + 1 - 1:
                 self.column_index = self.column_index_init
                 self.row_index += 2
             else:
                 self.column_index += 1
+
             self.current_param_widgets.append(curr_widget)
             self.current_param_labels.append(curr_label)
             self.current_param_variables.append(curr_variable)
 
     def check_param(self, parameters_desc):  # modified version of base_classes.Model.check_param
+        """method checking the parameters. open a windows with an error message if the parameters are wrong"""
+
+        # todo: avoid redefining this method each time the check_param is called
         def add_errored(errored_params, warning_params, param_name, param):
             if param[3] == "optional":
                 warning_params.append((param_name, param[0]))
             else:
                 errored_params.append((param_name, param[0]))
 
+        # todo: make an actual use of the warning_params
         errored_params = []
         warning_params = []
         for k, v in parameters_desc.items():
-
-            if isinstance(v[0], str):  # if the value comes from an entry widget
-                if len(v[0]) == 0:
+            # if the value comes from an entry widget
+            if isinstance(v[0], str):
+                if len(v[0]) == 0:  # empty entrybox
                     add_errored(errored_params, warning_params, k, v)
                     continue
-
+                # if the parameter is supposed to be something else than a string
                 if not v[2] is str:
                     try:
                         v[0] = v[2](v[0])
                     except TypeError:
                         add_errored(errored_params, warning_params, k, v)
-            else:  # it's a boolean
+
+            # it's a boolean
+            else:
                 v[0] = bool(v[0])
 
+        # opening the error windows if at least one parameter is errored
         if len(errored_params) != 0:
             error_msg = f"les paramètres suivants sont erronés: {', '.join([k for k, v in errored_params])}"
             showerror(title="parameter error(s)", message=error_msg)
@@ -245,35 +259,40 @@ class DisplayZone(CustomWidget):
         return parameters_desc
 
     def draw(self):
-        if self.current_itu_model is not None:
+        """method called to draw the image of the current model"""
+        if self.current_itu_model is not None:  # if it is defined
+
             default_parameters_desc = self.current_itu_model.parameters_desc
+
+            # gathering the parameters from the GUI
             parameters_desc = {}
             for i, k in enumerate(default_parameters_desc):
                 var = self.current_param_variables[i].get()
                 parameters_desc[k] = [var] + list(default_parameters_desc[k])
 
+            # checks the parameters gathered from the GUI
             try:
                 self.check_param(parameters_desc)
             except TypeError as e:
                 return
 
+            # evaluating and drawing the image inside the canvas
             self.current_itu_model.evaluate(plot=True, **{k: v[0] for k, v in parameters_desc.items()})
             im = self.current_itu_model.get_image()
             size = im.size
             self.current_image = ImageTk.PhotoImage(image=im)
-            print(type(self.current_image))
-            self.canvas.im_id = self.canvas.create_image(size, image=self.current_image, anchor="se")
-        else:
-            return
+            self.canvas.create_image(size, image=self.current_image, anchor="se")  # anchor inverted, i don't know why
 
     def clear(self):
+        """method used to removing the current curves on the current image of the current model"""
         if not self.current_itu_model is None:
+            # clearing the internal image of the model
             self.current_itu_model.clear()
+
+            # refreshing the image
             im = self.current_itu_model.get_image()
             self.current_image = ImageTk.PhotoImage(image=im)
             self.canvas.im_id = self.canvas.create_image(im.size, image=self.current_image, anchor="se")
-
-
 
 
 class Gui:
