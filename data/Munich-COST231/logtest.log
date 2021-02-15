@@ -1,0 +1,7 @@
+2018-11-09 14:59:33,541 - root - INFO load lay file
+2018-11-09 14:59:33,777 - root - INFO load latlon coordinates and convert
+2018-11-09 14:59:33,777 - root - INFO update display section
+2018-11-09 14:59:33,777 - root - INFO reading points
+2018-11-09 14:59:34,119 - root - INFO reading segments
+2018-11-09 14:59:55,557 - root - INFO g2npy
+2018-11-09 15:02:03,268 - matplotlib.font_manager - DEBUG findfont: Matching :family=sans-serif:style=normal:variant=normal:weight=normal:stretch=normal:size=10.0 to Arial ('/usr/share/fonts/truetype/msttcorefonts/Arial.ttf') with score of 0.050000
