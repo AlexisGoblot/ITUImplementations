@@ -5,6 +5,52 @@ import pandas as pd
 
 from models.base_classes import ITU, Model
 
+q = np.linspace(0, 1, 200)
+
+# definition of the urban templates:
+cdfHLondon = np.array(
+    [[0, 0], [8, 1e-3], [15, 0.05], [18, 0.09], [20, 0.3], [25, 0.5], [40, 0.9], [60, 0.93], [85, 0.97],
+     [150, 0.9701],
+     [151, 0.98], [170, 1]])
+cdfD1London = np.array([[0, 0], [10, 0.5], [25, 0.8], [50, 0.91], [100, 0.9 + 0.075], [150, 0.98], [350, 1]])
+cdfD2London = np.array(
+    [[0, 0], [10, 1e-3], [25, 0.1], [50, 0.35], [90, 0.8], [100, 0.85], [150, 0.95], [200, 0.98], [350, 1]])
+# creates interpolators
+IPH = PchipInterpolator(cdfHLondon[:, 1], cdfHLondon[:, 0])
+IPD1 = PchipInterpolator(cdfD1London[:, 1], cdfD1London[:, 0])
+IPD2 = PchipInterpolator(cdfD2London[:, 1], cdfD2London[:, 0])
+
+sdhL = pd.Series(index=q, data=IPH(q))
+sd2L = pd.Series(index=q, data=IPD2(q))
+sd1L = pd.Series(index=q, data=IPD1(q))
+urban_template_london = {'Db1': sd1L.values, 'Db2': sd2L.values, 'Hb': sdhL.values}
+
+# Melbourne
+
+cdfDb1Melbourne = np.array(
+    [[0, 0], [0.2, 8.3], [0.5, 19], [0.8, 45.5], [0.9, 82], [0.95, 100], [0.972, 150], [0.985, 200], [1, 350]])
+cdfDb2Melbourne = np.array(
+    [[0, 0], [0.01, 16.7], [0.3, 50], [0.4, 60.3], [0.47, 70.5], [0.5, 70.51], [0.7, 100], [0.8, 120.5], [0.9, 139.7],
+     [0.925, 150], [0.975, 200], [1, 350]])
+cdfHMelbourne = np.array(
+    [[0, 0], [0.008, 3], [0.1, 5.7], [0.2, 9.7], [0.3, 12.3], [0.4, 15], [0.5, 20], [0.63, 24.7], [0.64, 30],
+     [0.68, 31], [0.7, 34], [0.71, 36.7], [0.75, 40], [0.8, 42.7], [0.825, 49], [0.83, 59], [0.835, 60],
+     [0.83501, 65.7], [0.897, 74], [0.9, 95.3], [0.92, 106.7], [0.95, 107], [0.951, 150], [0.986, 160], [1, 180]])
+
+# creates interpolators
+
+IPHM = PchipInterpolator(cdfHMelbourne[:, 0], cdfHMelbourne[:, 1])
+IPD1M = PchipInterpolator(cdfDb1Melbourne[:, 0], cdfDb1Melbourne[:, 1])
+IPD2M = PchipInterpolator(cdfDb2Melbourne[:, 0], cdfDb2Melbourne[:, 1])
+
+sdhM = pd.Series(index=q, data=IPHM(q))
+sd2M = pd.Series(index=q, data=IPD2M(q))
+sd1M = pd.Series(index=q, data=IPD1M(q))
+
+urban_template_melbourne = {'Db1': sd1M.values, 'Db2': sd2M.values, 'Hb': sdhM.values}
+
+urban_templates = {"london": urban_template_london, "melbourne": urban_template_melbourne}
+
 
 class ITU2402(ITU):
 
@@ -17,7 +63,8 @@ class ITU2402(ITU):
             "N": (10000, int, "optional"),
             "f": (30.0, float, "optional"),
             "Hs": (5.0, float, "optional"),
-            "theta": (40.0, float, "optional")
+            "theta": (40.0, float, "optional"),
+            "city": ("london", str, "optional")
         }
 
         self.models = {1: Model(self.model_1,
@@ -26,20 +73,20 @@ class ITU2402(ITU):
                                 "pourcentage d'emplacement",
                                 self.param_model),
                        2: Model(self.model_2,
-                             "Modélisation des pertes par diffraction",
-                             "pertes de diffraction (dB)",
-                             "pourcentage d'emplacement",
-                             self.param_model),
+                                "Modélisation des pertes par diffraction",
+                                "pertes de diffraction (dB)",
+                                "pourcentage d'emplacement",
+                                self.param_model),
                        3: Model(self.model_3,
-                             "Modélisation des pertes par réflexion",
-                             "pertes par réflexion (dB)",
-                             "pourcentage d'emplacement",
-                             self.param_model)
+                                "Modélisation des pertes par réflexion",
+                                "pertes par réflexion (dB)",
+                                "pourcentage d'emplacement",
+                                self.param_model)
                        }
 
         ITU.__init__(self, name, ITU_number, tags, model_amount=len(self.models))
 
-    def compute_models(self, N: int = 10000, f: float = 30.0, Hs: float = 5.0, theta: float = 40.0) -> dict:
+    def compute_models(self, N: int = 10000, f: float = 30.0, Hs: float = 5.0, theta: float = 40.0, city: str = "london") -> dict:
         """
         First model described in the ITU 2108 description.
 
@@ -53,6 +100,8 @@ class ITU2402(ITU):
             height of the station
         theta : float, optional
             angle, in degrees
+        city : str, optional
+            data of the city used
 
         Raises
         ------
@@ -66,22 +115,6 @@ class ITU2402(ITU):
         """
         theta = np.array([theta])
         # definition des batiments de londre
-        cdfHLondon = np.array(
-            [[0, 0], [8, 1e-3], [15, 0.05], [18, 0.09], [20, 0.3], [25, 0.5], [40, 0.9], [60, 0.93], [85, 0.97],
-             [150, 0.9701],
-             [151, 0.98], [170, 1]])
-        cdfD1London = np.array([[0, 0], [10, 0.5], [25, 0.8], [50, 0.91], [100, 0.9 + 0.075], [150, 0.98], [350, 1]])
-        cdfD2London = np.array(
-            [[0, 0], [10, 1e-3], [25, 0.1], [50, 0.35], [90, 0.8], [100, 0.85], [150, 0.95], [200, 0.98], [350, 1]])
-        # creates interpolators
-        IPH = PchipInterpolator(cdfHLondon[:, 1], cdfHLondon[:, 0])
-        IPD1 = PchipInterpolator(cdfD1London[:, 1], cdfD1London[:, 0])
-        IPD2 = PchipInterpolator(cdfD2London[:, 1], cdfD2London[:, 0])
-        q = np.linspace(0, 1, 200)
-        sdhL = pd.Series(index=q, data=IPH(q))
-        sd2L = pd.Series(index=q, data=IPD2(q))
-        sd1L = pd.Series(index=q, data=IPD1(q))
-        urban_template = {'Db1': sd1L.values, 'Db2': sd2L.values, 'Hb': sdhL.values}
 
         # constantes de la recommandation
         Kdr = 0.5
@@ -93,9 +126,9 @@ class ITU2402(ITU):
 
         # Generation des batiments de la ville, section 4.4
 
-        Db1_vect = urban_template['Db1']
-        Db2_vect = urban_template['Db2']
-        Hb_vect = urban_template['Hb']
+        Db1_vect = urban_templates[city]['Db1']
+        Db2_vect = urban_templates[city]['Db2']
+        Hb_vect = urban_templates[city]['Hb']
 
         # Section 5.4.1
 
@@ -219,19 +252,19 @@ class ITU2402(ITU):
         # plt.show()
         return values
 
-    def model_1(self, N: int = 10000, f: float = 30.0, Hs: float = 5.0, theta: float = 40.0) -> (
-    np.array, np.array, str):
-        values = self.compute_models(N, f, Hs, theta)["clutter loss"]
+    def model_1(self, N: int = 10000, f: float = 30.0, Hs: float = 5.0, theta: float = 40.0, city: str = "london") -> (
+            np.array, np.array, str):
+        values = self.compute_models(N, f, Hs, theta, city)["clutter loss"]
         return values["x"], values["y"], values["label"]
 
-    def model_2(self, N: int = 10000, f: float = 30.0, Hs: float = 5.0, theta: float = 40.0) -> (
-    np.array, np.array, str):
-        values = self.compute_models(N, f, Hs, theta)["diffraction loss"]
+    def model_2(self, N: int = 10000, f: float = 30.0, Hs: float = 5.0, theta: float = 40.0, city: str = "london") -> (
+            np.array, np.array, str):
+        values = self.compute_models(N, f, Hs, theta, city)["diffraction loss"]
         return values["x"], values["y"], values["label"]
 
-    def model_3(self, N: int = 10000, f: float = 30.0, Hs: float = 5.0, theta: float = 40.0) -> (
-    np.array, np.array, str):
-        values = self.compute_models(N, f, Hs, theta)["reflection loss"]
+    def model_3(self, N: int = 10000, f: float = 30.0, Hs: float = 5.0, theta: float = 40.0, city: str = "london") -> (
+            np.array, np.array, str):
+        values = self.compute_models(N, f, Hs, theta, city)["reflection loss"]
         return values["x"], values["y"], values["label"]
 
 
