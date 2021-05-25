@@ -53,6 +53,174 @@ urban_template_melbourne = {'Db1': sd1M.values, 'Db2': sd2M.values, 'Hb': sdhM.v
 urban_templates = {"london": urban_template_london, "melbourne": urban_template_melbourne}
 
 
+def compute_models(N: int = 10000, f: float = 30.0, Hs: float = 5.0, theta: float = 40.0,
+                   city: str = "london") -> dict:
+    """
+    First model described in the ITU 2108 description.
+
+    Parameters
+    ----------
+    N : int, optional
+        number of points in the simulation
+    f : float, optional
+        frequency used in the simulation
+    Hs : float, optional
+        height of the station
+    theta : float, optional
+        angle, in degrees
+    city : str, optional
+        data of the city used
+
+    Raises
+    ------
+    ValueError
+
+
+    Returns
+    -------
+        a dictionary containing "clutter loss", "diffraction loss" and "reflection loss" model values
+
+    """
+    theta = np.array([theta])
+    # definition des batiments de londre
+
+    # constantes de la recommandation
+    Kdr = 0.5
+    Kdh = 1.5
+    Khc = 0.3
+    Krc = 3
+    Krs = 15
+    Krm = 8
+
+    # Generation des batiments de la ville, section 4.4
+
+    Db1_vect = urban_templates[city]['Db1']
+    Db2_vect = urban_templates[city]['Db2']
+    Hb_vect = urban_templates[city]['Hb']
+
+    # Section 5.4.1
+
+    Db1 = np.quantile(Db1_vect, np.random.rand(N), interpolation='higher')
+    Db2 = np.quantile(Db2_vect, np.random.rand(N), interpolation='higher')
+    Db12 = Db2 - Db1
+
+    pr13 = 1 - Kdr * (1 + np.random.rand(N))
+    pr23 = 1 - Kdr * (1 + np.random.rand(N))
+    pr34 = 1 - Kdr * (1 + np.random.rand(N))
+
+    Dr13 = np.quantile(Db1_vect, pr13, interpolation='higher')
+    Dr23 = np.quantile(Db1_vect, pr23, interpolation='higher')
+    Dr34 = np.quantile(Db1_vect, pr34, interpolation='higher')
+
+    # Section 5.4.2
+
+    Hc = np.quantile(Hb_vect, Khc, interpolation='higher')
+
+    Hb1 = np.quantile(Hb_vect, np.random.rand(N), interpolation='higher')
+    Hb2 = np.quantile(Hb_vect, np.random.rand(N), interpolation='higher')
+    Hb1s = Hb1 - Hs
+    Hb2s = Hb2 - Hs
+
+    Rdh = Kdh * (np.median(Db1_vect) / np.median(Hb_vect))
+
+    if Rdh > 1:
+        Hb1s[Hb1s > Hc] = Hc + (Hb1s[Hb1s > Hc] - Hc) / Rdh
+        Hb2s[Hb2s > Hc] = Hc + (Hb2s[Hb2s > Hc] - Hc) / Rdh
+
+    Hb3s = np.quantile(Hb_vect, np.random.rand(N), interpolation='higher') - Hs
+    Hb4s = np.quantile(Hb_vect, np.random.rand(N), interpolation='higher') - Hs
+
+    # Section 5.5
+
+    lambd = 0.3 / f  # avec f en GHz
+
+    Hrs1 = hray(0, Db1, theta)
+    nu1 = nu_calcul(Db1, Hb1, Hrs1, lambd, Hs)
+
+    Ld1 = J(nu1)
+
+    Hrs2 = hray(Hrs1, Db12, theta)
+    nu2 = nu_calcul(Db2, Hb2, Hrs2, lambd, Hs)
+
+    Ld2 = J(nu2)
+
+    # Ld = Ld1 + Ld2
+
+    Ld = 10 * np.log10((10 ** (0.1 * Ld1) + 10 ** (0.1 * Ld2)) * (1 + Ld1 + Ld2) / (2 + Ld1 + Ld2))
+
+    # Section 5.6
+
+    # On reprend les vrais hauteurs de batiments
+    Hb1s = Hb1 - Hs
+    Hb2s = Hb2 - Hs
+
+    Hrs3_1 = hray(Hrs1, Dr13, theta)
+    Hrs3_2 = hray(Hrs2, Dr23, theta)
+    Hrs4_1 = hray(Hrs3_1, Dr34, theta)
+    Hrs4_2 = hray(Hrs3_2, Dr34, theta)
+
+    # On initialise la matrice Nr
+    Nr = np.zeros([N, 1])
+
+    Nr[Hrs1 < Hb1s[:, None]] += 1
+    Nr[(Nr == 1) & (Hrs3_1 < Hb3s[:, None])] += 1
+    Nr[(Nr == 2) & (Hrs4_1 < Hb4s[:, None])] = 0
+
+    Nr[Nr != 0] += 5  # astuce pour eviter de traiter les cas qui ont ete reflechis
+    # sur le batiment 1 dans la partie reflexion sur le batiment 2
+
+    Nr[(Nr == 0) & (Hrs2 < Hb2s[:, None])] += 1
+    Nr[(Nr == 1) & (Hrs3_2 < Hb3s[:, None])] += 1
+    Nr[(Nr == 2) & (Hrs4_2 < Hb4s[:, None])] = 0
+
+    Nr[Nr > 3] -= 5  # on remet les reflexions comme il faut
+
+    Llof = Krm - Krs * np.log10(f / Krc)
+    Lr = 10 * np.log10(10 ** (0.1 * Krm) + 10 ** (0.1 * Llof))
+
+    # Section 5.7
+
+    p = np.random.rand(N)
+    # In order to randomize Reflexion coeff
+    coeff = (-np.log(1 - p)) ** 0.5 / 0.833
+    Lc = Ld.copy()
+    Lc[Nr == 1] = -10 * np.log10(
+        10 ** (0.1 * (-Ld[Nr == 1])) + 10 ** (0.1 * (-1 * Lr * np.resize(coeff, [N, 1])[:, :][Nr == 1])))
+    Lc[Nr == 2] = -10 * np.log10(
+        10 ** (0.1 * (-Ld[Nr == 2])) + 10 ** (0.1 * (-2 * Lr * np.resize(coeff, [N, 1])[:, :][Nr == 2])))
+    Lossr = np.zeros(Lc.shape)
+    Lossr[Nr == 0] = 0
+    Lossr[Nr == 1] = -10 * np.log10(10 ** (0.1 * (-1 * Lr * np.resize(coeff, [N, 1])[:, :][Nr == 1])))
+    Lossr[Nr == 2] = -10 * np.log10(10 ** (0.1 * (-2 * Lr * np.resize(coeff, [N, 1])[:, :][Nr == 2])))
+
+    colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple',
+              'tab:brown', 'tab:pink', 'tab:grey', 'tab:olive', 'tab:cyan']
+
+    values = {}
+    # affichage des clutter loss (Lc)
+    tmp_x = np.sort(Lc[:, 0])
+    tmp_y = np.array(range(N)) / float(N)
+    values["clutter loss"] = {"x": tmp_x, "y": tmp_y, "label": f"{str(theta[0])} degrés"}
+    # plt.plot(tmp_x, tmp_y, colors[0], label=f"{str(theta[0])} degrés clutter loss")
+
+    # affichage des pertes de diffraction (Ld)
+    tmp_x = np.sort(Ld[:, 0])
+    # plt.plot(tmp_x, tmp_y, colors[0], linestyle='--', label=f"{str(theta[0])} degrés perte diffraction")
+    values["diffraction loss"] = {"x": tmp_x, "y": tmp_y, "label": f"{str(theta[0])} degrés"}
+
+    # affichage des pertes de reflexion (Lr)
+    tmp_x = np.sort(Lossr[:, 0])
+    # plt.plot(tmp_x, tmp_y, colors[0], linestyle=':', label=f"{str(theta[0])} degrés perte de réflexion")
+    values["reflection loss"] = {"x": tmp_x, "y": tmp_y, "label": f"{str(theta[0])} degrés"}
+
+    # plt.xlabel("dB")
+    # plt.ylabel("percent of locations")
+    # plt.title("titre")
+    # plt.legend()
+    # plt.show()
+    return values
+
+
 class ITU2402(ITU):
 
     def __init__(self):
@@ -98,186 +266,19 @@ class ITU2402(ITU):
 
         ITU.__init__(self, name, ITU_number, tags, model_amount=len(self.models))
 
-    def compute_models(self, N: int = 10000, f: float = 30.0, Hs: float = 5.0, theta: float = 40.0,
-                       city: str = "london") -> dict:
-        """
-        First model described in the ITU 2108 description.
-
-        Parameters
-        ----------
-        N : int, optional
-            number of points in the simulation
-        f : float, optional
-            frequency used in the simulation
-        Hs : float, optional
-            height of the station
-        theta : float, optional
-            angle, in degrees
-        city : str, optional
-            data of the city used
-
-        Raises
-        ------
-        ValueError
-
-
-        Returns
-        -------
-            a dictionary containing "clutter loss", "diffraction loss" and "reflection loss" model values
-
-        """
-        theta = np.array([theta])
-        # definition des batiments de londre
-
-        # constantes de la recommandation
-        Kdr = 0.5
-        Kdh = 1.5
-        Khc = 0.3
-        Krc = 3
-        Krs = 15
-        Krm = 8
-
-        # Generation des batiments de la ville, section 4.4
-
-        Db1_vect = urban_templates[city]['Db1']
-        Db2_vect = urban_templates[city]['Db2']
-        Hb_vect = urban_templates[city]['Hb']
-
-        # Section 5.4.1
-
-        Db1 = np.quantile(Db1_vect, np.random.rand(N), interpolation='higher')
-        Db2 = np.quantile(Db2_vect, np.random.rand(N), interpolation='higher')
-        Db12 = Db2 - Db1
-
-        pr13 = 1 - Kdr * (1 + np.random.rand(N))
-        pr23 = 1 - Kdr * (1 + np.random.rand(N))
-        pr34 = 1 - Kdr * (1 + np.random.rand(N))
-
-        Dr13 = np.quantile(Db1_vect, pr13, interpolation='higher')
-        Dr23 = np.quantile(Db1_vect, pr23, interpolation='higher')
-        Dr34 = np.quantile(Db1_vect, pr34, interpolation='higher')
-
-        # Section 5.4.2
-
-        Hc = np.quantile(Hb_vect, Khc, interpolation='higher')
-
-        Hb1 = np.quantile(Hb_vect, np.random.rand(N), interpolation='higher')
-        Hb2 = np.quantile(Hb_vect, np.random.rand(N), interpolation='higher')
-        Hb1s = Hb1 - Hs
-        Hb2s = Hb2 - Hs
-
-        Rdh = Kdh * (np.median(Db1_vect) / np.median(Hb_vect))
-
-        if Rdh > 1:
-            Hb1s[Hb1s > Hc] = Hc + (Hb1s[Hb1s > Hc] - Hc) / Rdh
-            Hb2s[Hb2s > Hc] = Hc + (Hb2s[Hb2s > Hc] - Hc) / Rdh
-
-        Hb3s = np.quantile(Hb_vect, np.random.rand(N), interpolation='higher') - Hs
-        Hb4s = np.quantile(Hb_vect, np.random.rand(N), interpolation='higher') - Hs
-
-        # Section 5.5
-
-        lambd = 0.3 / f  # avec f en GHz
-
-        Hrs1 = hray(0, Db1, theta)
-        nu1 = nu_calcul(Db1, Hb1, Hrs1, lambd, Hs)
-
-        Ld1 = J(nu1)
-
-        Hrs2 = hray(Hrs1, Db12, theta)
-        nu2 = nu_calcul(Db2, Hb2, Hrs2, lambd, Hs)
-
-        Ld2 = J(nu2)
-
-        # Ld = Ld1 + Ld2
-
-        Ld = 10 * np.log10((10 ** (0.1 * Ld1) + 10 ** (0.1 * Ld2)) * (1 + Ld1 + Ld2) / (2 + Ld1 + Ld2))
-
-        # Section 5.6
-
-        # On reprend les vrais hauteurs de batiments
-        Hb1s = Hb1 - Hs
-        Hb2s = Hb2 - Hs
-
-        Hrs3_1 = hray(Hrs1, Dr13, theta)
-        Hrs3_2 = hray(Hrs2, Dr23, theta)
-        Hrs4_1 = hray(Hrs3_1, Dr34, theta)
-        Hrs4_2 = hray(Hrs3_2, Dr34, theta)
-
-        # On initialise la matrice Nr
-        Nr = np.zeros([N, 1])
-
-        Nr[Hrs1 < Hb1s[:, None]] += 1
-        Nr[(Nr == 1) & (Hrs3_1 < Hb3s[:, None])] += 1
-        Nr[(Nr == 2) & (Hrs4_1 < Hb4s[:, None])] = 0
-
-        Nr[Nr != 0] += 5  # astuce pour eviter de traiter les cas qui ont ete reflechis
-        # sur le batiment 1 dans la partie reflexion sur le batiment 2
-
-        Nr[(Nr == 0) & (Hrs2 < Hb2s[:, None])] += 1
-        Nr[(Nr == 1) & (Hrs3_2 < Hb3s[:, None])] += 1
-        Nr[(Nr == 2) & (Hrs4_2 < Hb4s[:, None])] = 0
-
-        Nr[Nr > 3] -= 5  # on remet les reflexions comme il faut
-
-        Llof = Krm - Krs * np.log10(f / Krc)
-        Lr = 10 * np.log10(10 ** (0.1 * Krm) + 10 ** (0.1 * Llof))
-
-        # Section 5.7
-
-        p = np.random.rand(N)
-        # In order to randomize Reflexion coeff
-        coeff = (-np.log(1 - p)) ** 0.5 / 0.833
-        Lc = Ld.copy()
-        Lc[Nr == 1] = -10 * np.log10(
-            10 ** (0.1 * (-Ld[Nr == 1])) + 10 ** (0.1 * (-1 * Lr * np.resize(coeff, [N, 1])[:, :][Nr == 1])))
-        Lc[Nr == 2] = -10 * np.log10(
-            10 ** (0.1 * (-Ld[Nr == 2])) + 10 ** (0.1 * (-2 * Lr * np.resize(coeff, [N, 1])[:, :][Nr == 2])))
-        Lossr = np.zeros(Lc.shape)
-        Lossr[Nr == 0] = 0
-        Lossr[Nr == 1] = -10 * np.log10(10 ** (0.1 * (-1 * Lr * np.resize(coeff, [N, 1])[:, :][Nr == 1])))
-        Lossr[Nr == 2] = -10 * np.log10(10 ** (0.1 * (-2 * Lr * np.resize(coeff, [N, 1])[:, :][Nr == 2])))
-
-        colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple',
-                  'tab:brown', 'tab:pink', 'tab:grey', 'tab:olive', 'tab:cyan']
-
-        values = {}
-        # affichage des clutter loss (Lc)
-        tmp_x = np.sort(Lc[:, 0])
-        tmp_y = np.array(range(N)) / float(N)
-        values["clutter loss"] = {"x": tmp_x, "y": tmp_y, "label": f"{str(theta[0])} degrés"}
-        # plt.plot(tmp_x, tmp_y, colors[0], label=f"{str(theta[0])} degrés clutter loss")
-
-        # affichage des pertes de diffraction (Ld)
-        tmp_x = np.sort(Ld[:, 0])
-        # plt.plot(tmp_x, tmp_y, colors[0], linestyle='--', label=f"{str(theta[0])} degrés perte diffraction")
-        values["diffraction loss"] = {"x": tmp_x, "y": tmp_y, "label": f"{str(theta[0])} degrés"}
-
-        # affichage des pertes de reflexion (Lr)
-        tmp_x = np.sort(Lossr[:, 0])
-        # plt.plot(tmp_x, tmp_y, colors[0], linestyle=':', label=f"{str(theta[0])} degrés perte de réflexion")
-        values["reflection loss"] = {"x": tmp_x, "y": tmp_y, "label": f"{str(theta[0])} degrés"}
-
-        # plt.xlabel("dB")
-        # plt.ylabel("percent of locations")
-        # plt.title("titre")
-        # plt.legend()
-        # plt.show()
-        return values
-
     def model_1(self, N: int = 10000, f: float = 30.0, Hs: float = 5.0, theta: float = 40.0, city: str = "london") -> (
             np.array, np.array, str):
-        values = self.compute_models(N, f, Hs, theta, city)["clutter loss"]
+        values = compute_models(N, f, Hs, theta, city)["clutter loss"]
         return values["x"], values["y"], values["label"]
 
     def model_2(self, N: int = 10000, f: float = 30.0, Hs: float = 5.0, theta: float = 40.0, city: str = "london") -> (
             np.array, np.array, str):
-        values = self.compute_models(N, f, Hs, theta, city)["diffraction loss"]
+        values = compute_models(N, f, Hs, theta, city)["diffraction loss"]
         return values["x"], values["y"], values["label"]
 
     def model_3(self, N: int = 10000, f: float = 30.0, Hs: float = 5.0, theta: float = 40.0, city: str = "london") -> (
             np.array, np.array, str):
-        values = self.compute_models(N, f, Hs, theta, city)["reflection loss"]
+        values = compute_models(N, f, Hs, theta, city)["reflection loss"]
         return values["x"], values["y"], values["label"]
 
 
@@ -313,6 +314,7 @@ def nu_calcul(Db, Hb, Hrs, Lambda, Hs=5):
     Hb : vector of height (np.array)
     Hrs : table of distance (fonction of theta) (np.array)
     Lambda : lambda
+    Hs : station height above ground level (m) (int)
 
     Returns
     -------
