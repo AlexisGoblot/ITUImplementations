@@ -28,20 +28,20 @@ urban_template_london = {'Db1': sd1L.values, 'Db2': sd2L.values, 'Hb': sdhL.valu
 # Melbourne
 
 cdfDb1Melbourne = np.array(
-    [[0, 0], [0.2, 8.3], [0.5, 19], [0.8, 45.5], [0.9, 82], [0.95, 100], [0.972, 150], [0.985, 200], [1, 350]])
+    [[0, 0], [8.3, 0.2], [19, 0.5], [45.5, 0.8], [82, 0.9], [100, 0.95], [150, 0.972], [200, 0.985], [350, 1]])
 cdfDb2Melbourne = np.array(
-    [[0, 0], [0.01, 16.7], [0.3, 50], [0.4, 60.3], [0.47, 70.5], [0.5, 70.51], [0.7, 100], [0.8, 120.5], [0.9, 139.7],
-     [0.925, 150], [0.975, 200], [1, 350]])
+    [[0, 0], [16.7, 0.01], [50, 0.3], [60.3, 0.4], [70.5, 0.47], [70.51, 0.5], [100, 0.7], [120.5, 0.8], [139.7, 0.9],
+     [150, 0.925], [200, 0.975], [350, 1]])
 cdfHMelbourne = np.array(
-    [[0, 0], [0.008, 3], [0.1, 5.7], [0.2, 9.7], [0.3, 12.3], [0.4, 15], [0.5, 20], [0.63, 24.7], [0.64, 30],
-     [0.68, 31], [0.7, 34], [0.71, 36.7], [0.75, 40], [0.8, 42.7], [0.825, 49], [0.83, 59], [0.835, 60],
-     [0.83501, 65.7], [0.897, 74], [0.9, 95.3], [0.92, 106.7], [0.95, 107], [0.951, 150], [0.986, 160], [1, 180]])
+    [[0, 0], [3, 0.008], [5.7, 0.1], [9.7, 0.2], [12.3, 0.3], [15, 0.4], [20, 0.5], [24.7, 0.63], [30, 0.64],
+     [31, 0.68], [34, 0.7], [36.7, 0.71], [40, 0.75], [42.7, 0.8], [49, 0.825], [59, 0.83], [60, 0.835],
+     [65.7, 0.83501], [74, 0.897], [95.3, 0.9], [106.7, 0.92], [107, 0.95], [150, 0.951], [160, 0.986], [180, 1]])
 
 # creates interpolators
 
-IPHM = PchipInterpolator(cdfHMelbourne[:, 0], cdfHMelbourne[:, 1])
-IPD1M = PchipInterpolator(cdfDb1Melbourne[:, 0], cdfDb1Melbourne[:, 1])
-IPD2M = PchipInterpolator(cdfDb2Melbourne[:, 0], cdfDb2Melbourne[:, 1])
+IPHM = PchipInterpolator(cdfHMelbourne[:, 1], cdfHMelbourne[:, 0])
+IPD1M = PchipInterpolator(cdfDb1Melbourne[:, 1], cdfDb1Melbourne[:, 0])
+IPD2M = PchipInterpolator(cdfDb2Melbourne[:, 1], cdfDb2Melbourne[:, 0])
 
 sdhM = pd.Series(index=q, data=IPHM(q))
 sd2M = pd.Series(index=q, data=IPD2M(q))
@@ -86,7 +86,8 @@ class ITU2402(ITU):
 
         ITU.__init__(self, name, ITU_number, tags, model_amount=len(self.models))
 
-    def compute_models(self, N: int = 10000, f: float = 30.0, Hs: float = 5.0, theta: float = 40.0, city: str = "london") -> dict:
+    def compute_models(self, N: int = 10000, f: float = 30.0, Hs: float = 5.0, theta: float = 40.0,
+                       city: str = "london") -> dict:
         """
         First model described in the ITU 2108 description.
 
