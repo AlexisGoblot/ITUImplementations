@@ -65,7 +65,18 @@ class ITU2402(ITU):
             "f": (30.0, float, "optional"),
             "Hs": (5.0, float, "optional"),
             "theta": (40.0, float, "optional"),
-            "city": (["london", "melbourne"], tkinter.ttk.Combobox, "mandatory")
+            "city": ([city for city in urban_templates.keys()], tkinter.ttk.Combobox, "mandatory")
+        }
+
+        self.mappings = {
+            "french":
+                {  # basic localization
+                    "f": "fréquence (GHz)",
+                    "theta": "angle d'élévation (°)",
+                    "N": "nombre de points simulés",
+                    "Hs": "hauteur de la station au dessus du sol",
+                    "city": "ville"
+                }
         }
 
         self.models = {1: Model(self.model_1,
@@ -112,7 +123,7 @@ class ITU2402(ITU):
 
         Returns
         -------
-
+            a dictionary containing "clutter loss", "diffraction loss" and "reflection loss" model values
 
         """
         theta = np.array([theta])
@@ -268,14 +279,6 @@ class ITU2402(ITU):
             np.array, np.array, str):
         values = self.compute_models(N, f, Hs, theta, city)["reflection loss"]
         return values["x"], values["y"], values["label"]
-
-
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Apr 13 15:58:56 2021
-
-@author: Thomas Lebreton
-"""
 
 
 # Fonctions
