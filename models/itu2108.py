@@ -2,7 +2,7 @@
 import numpy as np
 import scipy.stats as st
 from models.base_classes import ITU, Model
-
+from tkinter import ttk
 
 def cotg(x):
     return np.cos(x) / np.sin(x)
@@ -56,8 +56,8 @@ class ITU2108(ITU):
         self.Q = self.N.isf
         self.param_model_1 = {
             "hauteur représentative du groupe d'obstacle (m)": (0, int, "mandatory"),
-            "utiliser équation (2b)?": (False, bool, "mandatory"),
-            "environnement": ("", str, "mandatory"),
+            "environnement": (["Eau/mer", "Zone dégagée/rurale", "Zone suburbaine",
+                               "Zone urbaine/boisée/forêt", "Zone urbaine dense"], ttk.Combobox, "mandatory"),
             "fréquence (GHz)": (1.5, float, "optional"),
             "largeur de rue (m)": (27, int, "optional"),
             "nombre d'éléments": (1000, int, "optional")
@@ -96,7 +96,7 @@ class ITU2108(ITU):
                                 xlim=(-5, 70))
                        }
 
-    def model_1(self, R: int, equation_2b: bool, env: str, f: float = 1.5, ws: int = 27, h_size: int = 1000) -> (
+    def model_1(self, R: int, env: str, f: float = 1.5, ws: int = 27, h_size: int = 1000) -> (
             np.array, np.array, str):
         """
         First model described in the ITU 2108 description.
@@ -105,8 +105,6 @@ class ITU2108(ITU):
         ----------
         R : int
             height of the obstacle group (m)
-        equation_2b : bool
-            Equation used to use the correct sub-model
         env : str
             Name of the environment.
         f : float, optional
@@ -143,6 +141,7 @@ class ITU2108(ITU):
         v = K_nu * (h_diff * theta_clut) ** 0.5
         J = 6.9 + 20 * np.log10(((v - 0.1) ** 2 + 1) ** 0.5 + v - 0.1)
         K_h2 = 21.8 + 6.2 * np.log10(f)
+        equation_2b = env in ["Eau/mer", "Zone dégagée/rurale"]
 
         if not equation_2b:
             A_h = J - 6.03

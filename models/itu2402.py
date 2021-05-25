@@ -65,7 +65,7 @@ class ITU2402(ITU):
             "f": (30.0, float, "optional"),
             "Hs": (5.0, float, "optional"),
             "theta": (40.0, float, "optional"),
-            "city": (["london", "melbourne"], tkinter.ttk.Combobox, "optional")
+            "city": (["london", "melbourne"], tkinter.ttk.Combobox, "mandatory")
         }
 
         self.models = {1: Model(self.model_1,
