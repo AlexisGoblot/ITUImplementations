@@ -55,24 +55,24 @@ class ITU2108(ITU):
         self.N = st.norm()
         self.Q = self.N.isf
         self.param_model_1 = {
-            "R": (0, int, "mandatory"),
-            "equation_2b": (False, bool, "mandatory"),
-            "env": ("", str, "mandatory"),
-            "f": (1.5, float, "optional"),
-            "ws": (27, int, "optional"),
-            "h_size": (1000, int, "optional")
+            "hauteur représentative du groupe d'obstacle (m)": (0, int, "mandatory"),
+            "utiliser équation (2b)?": (False, bool, "mandatory"),
+            "environnement": ("", str, "mandatory"),
+            "fréquence (GHz)": (1.5, float, "optional"),
+            "largeur de rue (m)": (27, int, "optional"),
+            "nombre d'éléments": (1000, int, "optional")
         }
 
         self.param_model_2 = {
-            "f": (30, int, "optional"),
-            "d_size": (1000, int, "optional"),
-            "correction_one_side": (False, bool, "optional")
+            "fréquence (GHz)": (30, int, "optional"),
+            "nombre d'éléments": (1000, int, "optional"),
+            "correction à seulement une extrémité?": (False, bool, "optional")
         }
 
         self.param_model_3 = {
-            "theta": (10, int, "optional"),
-            "f": (30, int, "optional"),
-            "p_size": (100, int, "optional")
+            "angle d'élévation (°)": (10, int, "optional"),
+            "fréquence (GHz)": (30, int, "optional"),
+            "nombre d'éléments": (100, int, "optional")
         }
 
         self.models = {1: Model(self.model_1,
