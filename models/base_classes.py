@@ -12,7 +12,7 @@ class Model:
     """
 
     def __init__(self, model_function, title, xlabel, ylabel, parameters_desc, xscale="linear", yscale="linear",
-                 xlim=None, ylim=None):
+                 xlim=None, ylim=None, mappings=None, language="french"):
         self.model_function = model_function
         self.title = title
         self.xlabel = xlabel
@@ -22,7 +22,18 @@ class Model:
         self.xlim = xlim
         self.ylim = ylim
         self.figure = None
+        self.mappings = mappings
+        self.language = language
         self.parameters_desc = self.check_param(parameters_desc)  # dict name <-> (value, type, type of parameter)
+
+    def get_mapping(self, unmapped_string):
+        if (
+            self.mappings is None or
+            not self.language in self.mappings or
+            not unmapped_string in self.mappings[self.language]
+        ):
+            return unmapped_string
+        return self.mappings[self.language][unmapped_string]
 
     def check_param(self, parameters_desc):
         """method to check if the default parameter description has no issue when a Model object is instanciated"""

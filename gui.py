@@ -175,9 +175,9 @@ class DisplayZone(CustomWidget):
             sel = self.lb_model.curselection()[0]  # only one value in browse mode
             # itu model index starts at 1
             self.current_itu_model = self.get_itu_command().models[sel + 1]
-            self.update(self.current_itu_model.parameters_desc)
+            self.update()
 
-    def update(self, parameters_desc):
+    def update(self):
         """method updating the dynamic widgets for the model parameters"""
         # removing any previous params from another model
         if len(self.current_param_labels) != 0:
@@ -189,10 +189,10 @@ class DisplayZone(CustomWidget):
             self.column_index = self.column_index_init
 
         # constructing all the widgets for the model
-        for k, v in parameters_desc.items():
+        for k, v in self.current_itu_model.parameters_desc.items():
             curr_widget = None
             curr_variable = None
-            curr_label = tk.Label(self.frame, text=k)
+            curr_label = tk.Label(self.frame, text=self.current_itu_model.get_mapping(k))
 
             # autodetect the correct widget type
             if v[1] in [int, float, str]:

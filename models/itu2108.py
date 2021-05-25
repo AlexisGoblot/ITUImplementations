@@ -4,6 +4,7 @@ import scipy.stats as st
 from models.base_classes import ITU, Model
 from tkinter import ttk
 
+
 def cotg(x):
     return np.cos(x) / np.sin(x)
 
@@ -55,45 +56,63 @@ class ITU2108(ITU):
         self.N = st.norm()
         self.Q = self.N.isf
         self.param_model_1 = {
-            "hauteur représentative du groupe d'obstacle (m)": (0, int, "mandatory"),
-            "environnement": (["Eau/mer", "Zone dégagée/rurale", "Zone suburbaine",
-                               "Zone urbaine/boisée/forêt", "Zone urbaine dense"], ttk.Combobox, "mandatory"),
-            "fréquence (GHz)": (1.5, float, "optional"),
-            "largeur de rue (m)": (27, int, "optional"),
-            "nombre d'éléments": (1000, int, "optional")
+            "R": (0, int, "mandatory"),
+            "env": (["Eau/mer", "Zone dégagée/rurale", "Zone suburbaine",
+                     "Zone urbaine/boisée/forêt", "Zone urbaine dense"], ttk.Combobox, "mandatory"),
+            "f": (1.5, float, "optional"),
+            "ws": (27, int, "optional"),
+            "h_size": (1000, int, "optional")
         }
 
         self.param_model_2 = {
-            "fréquence (GHz)": (30, int, "optional"),
-            "nombre d'éléments": (1000, int, "optional"),
-            "correction à seulement une extrémité?": (False, bool, "optional")
+            "f": (30, int, "optional"),
+            "d_size": (1000, int, "optional"),
+            "correction_one_side": (False, bool, "optional")
         }
 
         self.param_model_3 = {
-            "angle d'élévation (°)": (10, int, "optional"),
-            "fréquence (GHz)": (30, int, "optional"),
-            "nombre d'éléments": (100, int, "optional")
+            "theta": (10, int, "optional"),
+            "f": (30, int, "optional"),
+            "p_size": (100, int, "optional")
+        }
+
+        self.mappings = {
+            "french":
+                {  # basic localization
+                    "f": "fréquence (GHz)",
+                    "p_size": "nombre d'éléments",
+                    "d_size": "nombre d'éléments",
+                    "h_size": "nombre d'éléments",
+                    "ws": "largeur de rue (m)",
+                    "env": "environnement",
+                    "R": "hauteur représentative du groupe d'obstacle (m)",
+                    "theta": "angle d'élévation (°)",
+                    "correction_one_side": "correction à seulement une extrémité?"
+                }
         }
 
         self.models = {1: Model(self.model_1,
                                 "Modèle de correction de la hauteur en fonction du gain du terminal",
                                 "Hauteur d'antenne (m)",
                                 "Affaiblissement supplémentaire (dB)",
-                                self.param_model_1),
+                                self.param_model_1,
+                                mappings=self.mappings),
 
                        2: Model(self.model_2,
                                 "Modèle statistique de l'affaiblissement dû à un groupe\nd'obstacles pour des trajets de Terre",
                                 "distance (km)",
                                 "valeur médiane des affaiblissements (dB)",
                                 self.param_model_2,
-                                xscale="log"),
+                                xscale="log",
+                                mappings=self.mappings),
 
                        3: Model(self.model_3,
                                 "Modèle statistique d'affaiblissement dû à un groupe d'obstacles \npour un trajet Terre-espace et pour les services aéronautiques",
                                 "Lces (dB)",
                                 "Pourcentage d'emplacements",
                                 self.param_model_3,
-                                xlim=(-5, 70))
+                                xlim=(-5, 70),
+                                mappings=self.mappings)
                        }
 
     def model_1(self, R: int, env: str, f: float = 1.5, ws: int = 27, h_size: int = 1000) -> (
