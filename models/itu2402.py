@@ -251,17 +251,20 @@ class ITU2402(ITU):
                                 "Modélisation du clutter loss",
                                 "clutter loss (dB)",
                                 "pourcentage d'emplacement",
-                                self.param_model),
+                                self.param_model,
+                                mappings=self.mappings),
                        2: Model(self.model_2,
                                 "Modélisation des pertes par diffraction",
                                 "pertes de diffraction (dB)",
                                 "pourcentage d'emplacement",
-                                self.param_model),
+                                self.param_model,
+                                mappings=self.mappings),
                        3: Model(self.model_3,
                                 "Modélisation des pertes par réflexion",
                                 "pertes par réflexion (dB)",
                                 "pourcentage d'emplacement",
-                                self.param_model)
+                                self.param_model,
+                                mappings=self.mappings)
                        }
 
         ITU.__init__(self, name, ITU_number, tags, model_amount=len(self.models))
