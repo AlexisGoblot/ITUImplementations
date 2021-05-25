@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
 import io
+import tkinter.ttk as ttk
 
 
 class Model:
@@ -35,7 +36,10 @@ class Model:
 
             # check for correct parameter type
             if not isinstance(v[0], v[1]):
-                errored_params.append(k)
+                if v[1] in [ttk.Combobox]:
+                    pass  # do nothing as the object is instancied later in the code, because it's a tk widget
+                else:
+                    errored_params.append(k)
 
         # if at least one parameter is errored
         if len(errored_params) != 0:

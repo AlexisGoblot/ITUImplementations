@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.interpolate import PchipInterpolator
 import pandas as pd
+import tkinter.ttk
 
 from models.base_classes import ITU, Model
 
@@ -64,7 +65,7 @@ class ITU2402(ITU):
             "f": (30.0, float, "optional"),
             "Hs": (5.0, float, "optional"),
             "theta": (40.0, float, "optional"),
-            "city": ("london", str, "optional")
+            "city": (["london", "melbourne"], tkinter.ttk.Combobox, "optional")
         }
 
         self.models = {1: Model(self.model_1,

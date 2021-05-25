@@ -1,4 +1,5 @@
 import tkinter as tk
+import tkinter.ttk as ttk
 from tkinter.messagebox import showerror, showwarning
 from pathlib import Path
 import importlib
@@ -200,6 +201,11 @@ class DisplayZone(CustomWidget):
                     curr_variable.set(str(v[0]))
                 curr_widget = tk.Entry(self.frame, textvariable=curr_variable)
 
+            elif v[1] is ttk.Combobox:
+                curr_widget = ttk.Combobox(self.frame, values=v[0])
+                curr_widget.current(0)
+                curr_variable = curr_widget #gui will call the get method of this object to retrieve its value
+
             else:  # boolean
                 curr_variable = tk.IntVar(self.frame)
                 if v[2] == "optional":
@@ -240,12 +246,17 @@ class DisplayZone(CustomWidget):
                 if len(v[0]) == 0:  # empty entrybox
                     add_errored(errored_params, warning_params, k, v)
                     continue
-                # if the parameter is supposed to be something else than a string
-                if not v[2] is str:
-                    try:
-                        v[0] = v[2](v[0])
-                    except TypeError:
-                        add_errored(errored_params, warning_params, k, v)
+
+                if v[2] in [ttk.Combobox]:
+                    pass
+
+                else:
+                    # if the parameter is supposed to be something else than a string (primitive type casting)
+                    if not v[2] is str:
+                        try:
+                            v[0] = v[2](v[0])
+                        except TypeError:
+                            add_errored(errored_params, warning_params, k, v)
 
             # it's a boolean
             else:
