@@ -12,6 +12,7 @@ from models.base_classes import ITU, Model
 
 # ignore runtime warnings throwns by numpy
 import warnings
+
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 # locating the path of the subpackage models
@@ -57,6 +58,8 @@ class SearchZone(CustomWidget):
         # keeping track of the set_itu_command
         self.set_itu_command = set_itu_command
 
+        # ITU label
+        self.label_itu = tk.Label(self.frame, text="recommandation ITU")
         # definition of the listbox widget listing all the itu
         self.lb_itu = tk.Listbox(self.frame, height=lb_height)
         self.lb_itu.bind_all("<<ListboxSelect>>", self._on_listbox_select, "+")
@@ -86,8 +89,9 @@ class SearchZone(CustomWidget):
 
         #
         # display the widgets inside the frame
-        self.entry_search.grid(row=0, column=0)
-        self.lb_itu.grid(row=1, column=0)
+        self.label_itu.grid(row=0, column=0)
+        self.entry_search.grid(row=1, column=0)
+        self.lb_itu.grid(row=2, column=0, sticky="ns")
 
     def filter_itu(self, *args):
         """method used when the entry box for the research is updated"""
@@ -124,7 +128,7 @@ class DisplayZone(CustomWidget):
         self.current_param_labels = []
 
         # values for dynamic display of the parameters
-        self.row_index_init = 1
+        self.row_index_init = 2
         self.column_index_init = 1
         self.row_index = self.row_index_init
         self.column_index = self.column_index_init
@@ -132,10 +136,13 @@ class DisplayZone(CustomWidget):
         # definition of the widgets to pick the correct model of the itu
         self.lb_model = tk.Listbox(self.frame, height=7)
         self.lb_model.bind_all("<<ListboxSelect>>", self._on_listbox_select, "+")
-        self.label_model = tk.Label(self.frame, text="pick a model")
+        self.label_model = tk.Label(self.frame, text="modèle de courbe")
 
         # definition of the label for the parameter zone
-        self.label_parameters = tk.Label(self.frame, text="parameters")
+        self.label_parameters = tk.Label(self.frame, text="paramètres")
+
+        # definition of the label for the model name
+        self.label_model_name = None
 
         # keeping track of the get_itu_command
         self.get_itu_command = get_itu_command
@@ -155,11 +162,16 @@ class DisplayZone(CustomWidget):
 
         # display of the widgets
         self.canvas.grid(row=20, column=1, columnspan=self.MAX_PARAM_COLUMNS)
-        self.btn_draw.grid(row=1, column=self.MAX_PARAM_COLUMNS + 1)
-        self.btn_clear.grid(row=2, column=self.MAX_PARAM_COLUMNS + 1)
+
         self.label_model.grid(row=0, column=0)
         self.lb_model.grid(row=1, column=0, rowspan=20, sticky="ns")
-        self.label_parameters.grid(row=0, column=1)
+
+        # removing this to avoid button being displayed before the selection of a model
+
+        # self.btn_draw.grid(row=self.row_index_init + 1, column=self.MAX_PARAM_COLUMNS + 1)
+        # self.btn_clear.grid(row=self.row_index_init + 2, column=self.MAX_PARAM_COLUMNS + 1)
+        # self.label_parameters.grid(row=self.row_index_init - 1, column=self.column_index_init,
+        #                            columnspan=self.MAX_PARAM_COLUMNS)
 
     def _on_listbox_select(self, event: tk.Event):
         """method called when the user click on a listbox"""
@@ -188,6 +200,22 @@ class DisplayZone(CustomWidget):
             self.row_index = self.row_index_init
             self.column_index = self.column_index_init
 
+        if not self.label_model_name is None:
+            self.label_model_name.grid_forget()
+
+        # updating these widgets:
+        self.btn_draw.grid_forget()
+        self.btn_clear.grid_forget()
+        self.label_parameters.grid_forget()
+
+        self.btn_draw.grid(row=self.row_index_init + 1, column=self.MAX_PARAM_COLUMNS + 1)
+        self.btn_clear.grid(row=self.row_index_init + 2, column=self.MAX_PARAM_COLUMNS + 1)
+        self.label_parameters.grid(row=self.row_index_init - 1, column=self.column_index_init,
+                                   columnspan=self.MAX_PARAM_COLUMNS)
+
+        self.label_model_name = tk.Label(self.frame, text=self.current_itu_model.title)
+        self.label_model_name.grid(row=self.row_index_init - 2, column=self.column_index_init,
+                                   columnspan=self.MAX_PARAM_COLUMNS)
         # constructing all the widgets for the model
         for k, v in self.current_itu_model.parameters_desc.items():
             curr_widget = None
@@ -204,7 +232,7 @@ class DisplayZone(CustomWidget):
             elif v[1] is ttk.Combobox:
                 curr_widget = ttk.Combobox(self.frame, values=v[0])
                 curr_widget.current(0)
-                curr_variable = curr_widget #gui will call the get method of this object to retrieve its value
+                curr_variable = curr_widget  # gui will call the get method of this object to retrieve its value
 
             else:  # boolean
                 curr_variable = tk.IntVar(self.frame)
@@ -339,4 +367,3 @@ class Gui:
 
 if __name__ == "__main__":
     a = Gui("gui", maximised=False)
-
