@@ -74,8 +74,12 @@ class Model:
         else:
             plt.figure(self.figure.number)
 
-        plt.plot(x, y, label=label)
-
+        # plot a point if the sequence has only one distinct point
+        if all([x[0] == elem for elem in x]) and all([y[0] == elem for elem in y]):
+            plt.plot(x, y, "ro", label=label)
+        # plot a line otherwise
+        else:
+            plt.plot(x, y, label=label)
     def delete_last_curve(self):
         if self.figure is None:
             return
