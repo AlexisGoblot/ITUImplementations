@@ -107,13 +107,18 @@ class SearchZone(CustomWidget):
     def _on_listbox_select(self, event: tk.Event):
         """method called when the user click on a listbox"""
         widget = event.widget  # current listbox
+        if not type(widget) is tk.Listbox:  # sometimes it's not a listbox for a unknown reason
+            return
         selection = widget.curselection()
 
         # do stuff only if the event is fired by the listbox of this widget
         if widget is self.lb_itu:
-            index_selection = selection[0]  # mode BROWSE by default so only one element
-            itu = itu_dict[self.lb_itu.get(index_selection)]
-            self.set_itu_command(itu)
+            try:
+                index_selection = selection[0]  # mode BROWSE by default so only one element
+                itu = itu_dict[self.lb_itu.get(index_selection)]
+                self.set_itu_command(itu)
+            except IndexError:  # todo: proper handling instead of dumb try/except clauses
+                pass
 
 
 class DisplayZone(CustomWidget):
@@ -184,10 +189,13 @@ class DisplayZone(CustomWidget):
                 self.lb_model.insert(tk.END, str(x + 1))
         # if the listbox is the one listing the model list: updating the model
         else:
-            sel = self.lb_model.curselection()[0]  # only one value in browse mode
-            # itu model index starts at 1
-            self.current_itu_model = self.get_itu_command().models[sel + 1]
-            self.update()
+            try:
+                sel = self.lb_model.curselection()[0]  # only one value in browse mode
+                # itu model index starts at 1
+                self.current_itu_model = self.get_itu_command().models[sel + 1]
+                self.update()
+            except IndexError:
+                pass  # todo: make a proper handling instead of dumb try/except clauses
 
     def update(self):
         """method updating the dynamic widgets for the model parameters"""
