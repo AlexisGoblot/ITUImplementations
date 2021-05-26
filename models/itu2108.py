@@ -99,7 +99,7 @@ class ITU2108(ITU):
                                 mappings=self.mappings),
 
                        2: Model(self.model_2,
-                                "Modèle statistique de l'affaiblissement dû à un groupe\nd'obstacles pour des trajets de Terre",
+                                "Modèle statistique de l'affaiblissement dû à un groupe \nd'obstacles pour des trajets de Terre",
                                 "distance (km)",
                                 "valeur médiane des affaiblissements (dB)",
                                 self.param_model_2,

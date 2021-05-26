@@ -124,6 +124,8 @@ class SearchZone(CustomWidget):
 class DisplayZone(CustomWidget):
     def __init__(self, master, get_itu_command):
         super().__init__(master)
+        self.plot_addition_widget_instance = None
+
         # how many parameters are displayed on the same line before going to the next line
         self.MAX_PARAM_COLUMNS = 3
 
@@ -166,6 +168,7 @@ class DisplayZone(CustomWidget):
         self.btn_clear = tk.Button(self.frame, text="Clear", command=self.clear)
         self.btn_delete_last = tk.Button(self.frame, text="Delete last curve", command=self.delete_last)
         self.btn_delete = tk.Button(self.frame, text="Delete selected curve", command=self.delete)
+        self.btn_add_plot = tk.Button(self.frame, text="Add plots", command=self.open_plot_widget)
 
         # definition of the  combo box for the selection of the curve to delete it
         self.combo_box_curve_deletion = tk.ttk.Combobox(self.frame)
@@ -183,6 +186,7 @@ class DisplayZone(CustomWidget):
         # self.btn_delete_last.grid(row=self.row_index_init + 3, column=self.MAX_PARAM_COLUMNS + 1)
         # self.combo_box_curve_deletion.grid(row=self.row_index_init + 4, column=self.MAX_PARAM_COLUMNS + 1)
         # self.btn_delete.grid(row=self.row_index_init + 5, column=self.MAX_PARAM_COLUMNS + 1)
+        # self.btn_add_plot.grid(row=self.row_index_init + 6, column=self.MAX_PARAM_COLUMNS + 1)
         # self.label_parameters.grid(row=self.row_index_init - 1, column=self.column_index_init,
         #                            columnspan=self.MAX_PARAM_COLUMNS)
 
@@ -226,17 +230,19 @@ class DisplayZone(CustomWidget):
         self.btn_delete_last.grid_forget()
         self.combo_box_curve_deletion.grid_forget()
         self.btn_delete.grid_forget()
+        self.btn_add_plot.grid_forget()
         self.label_parameters.grid_forget()
 
-        self.btn_draw.grid(row=self.row_index_init + 1, column=self.MAX_PARAM_COLUMNS + 1)
-        self.btn_clear.grid(row=self.row_index_init + 2, column=self.MAX_PARAM_COLUMNS + 1)
-        self.btn_delete_last.grid(row=self.row_index_init + 3, column=self.MAX_PARAM_COLUMNS + 1)
-        self.combo_box_curve_deletion.grid(row=self.row_index_init + 4, column=self.MAX_PARAM_COLUMNS + 1)
-        self.btn_delete.grid(row=self.row_index_init + 5, column=self.MAX_PARAM_COLUMNS + 1)
+        self.btn_draw.grid(row=self.row_index_init + 1, column=self.MAX_PARAM_COLUMNS + 1, sticky="we")
+        self.btn_clear.grid(row=self.row_index_init + 2, column=self.MAX_PARAM_COLUMNS + 1, sticky="we")
+        self.btn_delete_last.grid(row=self.row_index_init + 3, column=self.MAX_PARAM_COLUMNS + 1, sticky="we")
+        self.combo_box_curve_deletion.grid(row=self.row_index_init + 4, column=self.MAX_PARAM_COLUMNS + 1, sticky="we")
+        self.btn_delete.grid(row=self.row_index_init + 5, column=self.MAX_PARAM_COLUMNS + 1, sticky="we")
+        self.btn_add_plot.grid(row=self.row_index_init + 6, column=self.MAX_PARAM_COLUMNS + 1, sticky="we")
         self.label_parameters.grid(row=self.row_index_init - 1, column=self.column_index_init,
                                    columnspan=self.MAX_PARAM_COLUMNS)
 
-        self.label_model_name = tk.Label(self.frame, text=self.current_itu_model.title)
+        self.label_model_name = tk.Label(self.frame, text=self.current_itu_model.title.replace("\n", ""))
         self.label_model_name.grid(row=self.row_index_init - 2, column=self.column_index_init,
                                    columnspan=self.MAX_PARAM_COLUMNS)
         # constructing all the widgets for the model
@@ -343,6 +349,9 @@ class DisplayZone(CustomWidget):
             self.update_image()
 
     def update_image(self):
+        """
+        method used to update the figure of the current itu model displayed in the GUI
+        """
         if self.current_itu_model.figure is None:
             return
 
@@ -353,6 +362,9 @@ class DisplayZone(CustomWidget):
         self.populate_combobox_removal()
 
     def populate_combobox_removal(self):
+        """
+        method called to update the combobox holding all the plot names
+        """
         figure = self.current_itu_model.figure
         if figure is None:
             return
@@ -371,6 +383,9 @@ class DisplayZone(CustomWidget):
             self.update_image()
 
     def delete_last(self):
+        """
+        deletes the last plot from the current itu model figure
+        """
         try:
             self.current_itu_model.delete_last_curve()
             self.update_image()
@@ -378,6 +393,9 @@ class DisplayZone(CustomWidget):
             pass
 
     def delete(self):
+        """
+        deletes the corresponding curve in the combobox from the current itu model figure
+        """
         selected_value = self.combo_box_curve_deletion.get()
         if selected_value == "":  # if this is called when the combobox is empty
             return
@@ -387,6 +405,133 @@ class DisplayZone(CustomWidget):
         self.update_image()
         self.populate_combobox_removal()
         self.combo_box_curve_deletion.update()
+
+    def open_plot_widget(self):
+        """
+        open the PlotAdditionWindow widget at most one time.
+        """
+        if self.plot_addition_widget_instance is None:
+            self.plot_addition_widget_instance = PlotAdditionWindow(self.current_itu_model, self)
+
+    def unbind_plot_addition_window(self):
+        """
+        removes the instance of the PlotAdditionWindow
+        """
+        self.plot_addition_widget_instance = None
+
+
+class PlotAdditionWindow:
+    """
+    Class used to create a widget that will gather user data and plot it on the current itu model figure.
+    """
+    def __init__(self, current_itu_model, root_widget):
+        self.current_itu_model = current_itu_model
+        self.root_widget = root_widget
+        self.toplevel = tk.Toplevel(self.root_widget.master)
+
+        # catching the windows destruction event and binding a method on this event
+        self.toplevel.protocol('WM_DELETE_WINDOW', self.unbind)
+
+        # string variables to get X/Y arrays
+        self.sv_x = tk.StringVar(self.toplevel)
+        self.sv_y = tk.StringVar(self.toplevel)
+        self.sv_label = tk.StringVar(self.toplevel)
+
+        # various internal parameters
+        self.entry_width = 50
+        self.column_start_index = 0
+
+        # creation of labels
+        self.label_x = tk.Label(self.toplevel, text="X array")
+        self.label_y = tk.Label(self.toplevel, text="Y array")
+        self.label_label = tk.Label(self.toplevel, text="Legend")
+
+        # creation of the entries
+        self.entry_x = tk.Entry(self.toplevel, textvariable=self.sv_x, width=self.entry_width)
+        self.entry_y = tk.Entry(self.toplevel, textvariable=self.sv_y, width=self.entry_width)
+        self.entry_label = tk.Entry(self.toplevel, textvariable=self.sv_label, width=self.entry_width)
+
+        # creation of the buttons
+        self.btn_reset = tk.Button(self.toplevel, text="Reset fields", command=self.reset_fields)
+        self.btn_add = tk.Button(self.toplevel, text="Add plot", command=self.add_plot)
+
+        # display
+        self.label_x.grid(row=self.row_start_index, column=0, columnspan=2)
+        self.entry_x.grid(row=self.row_start_index + 1, column=0, columnspan=2)
+
+        self.label_y.grid(row=self.row_start_index + 2, column=0, columnspan=2)
+        self.entry_y.grid(row=self.row_start_index + 3, column=0, columnspan=2)
+
+        self.label_label.grid(row=self.row_start_index + 4, column=0, columnspan=2)
+        self.entry_label.grid(row=self.row_start_index + 5, column=0, columnspan=2)
+
+        self.btn_reset.grid(row=self.row_start_index + 6, column=0, sticky="we")
+        self.btn_add.grid(row=self.row_start_index + 6, column=1, sticky="we")
+
+    def reset_fields(self):
+        """function to clear the Entry widgets"""
+        self.sv_x.set("")
+        self.sv_y.set("")
+        self.sv_label.set("")
+
+    def add_plot(self):
+        """function to add a curve from the user data"""
+        def process_string(string, delimiter=";"):
+            """
+            function to convert a string into an array of float. Will throw a ValueError if the string can't be processed
+            """
+            # replacing "," with "." to avoid upsetting the user too much in case he inserted large amount of data with
+            # wrong symbol
+            elems = [float(elem.strip(" ").replace(",", ".")) for elem in string.split(delimiter)]
+            return elems
+
+        error_dict = {}
+
+        def check_array(string, array_name, delimiter=";"):
+            """function to check validity of array data strings"""
+            if string == "":
+                return array_name + " data is empty"
+            else:
+                try:
+                    process_string(string)
+                except ValueError:
+                    return f"error parsing following {array_name} data: " + string
+
+        error_x_array = check_array(self.sv_x.get(), "x")
+        error_y_array = check_array(self.sv_y.get(), "y")
+
+        # x array data checking
+        if error_x_array is None:
+            x_array = process_string(self.sv_x.get())
+        else:
+            error_dict["x_array"] = error_x_array
+
+        # y array data checking
+        if error_y_array is None:
+            y_array = process_string(self.sv_y.get())
+        else:
+            error_dict["y_array"] = error_y_array
+
+        # label checking
+        label = self.sv_label.get()
+        if label == "":
+            error_dict["label"] = "legend is empty"
+
+        # if at least one error is detected, display them to the user
+        if len(error_dict) != 0:
+            error_message = "Following errors were caught during the data verification:\n" + \
+                            "\n".join([error for error in error_dict.values()])
+            showerror("data parsing error", message=error_message)
+
+        # if everything went well, plotting the curve
+        else:
+            self.current_itu_model.plot(x_array, y_array, label)
+            self.root_widget.update_image()
+
+    def unbind(self):
+        """# function to unbind this instance, as it's currently destroyed"""
+        self.root_widget.unbind_plot_addition_window()
+        self.toplevel.destroy()
 
 
 class Gui:

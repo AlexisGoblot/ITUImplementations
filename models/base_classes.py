@@ -29,9 +29,9 @@ class Model:
 
     def get_mapping(self, unmapped_string):
         if (
-            self.mappings is None or
-            not self.language in self.mappings or
-            not unmapped_string in self.mappings[self.language]
+                self.mappings is None or
+                not self.language in self.mappings or
+                not unmapped_string in self.mappings[self.language]
         ):
             return unmapped_string
         return self.mappings[self.language][unmapped_string]
@@ -87,11 +87,10 @@ class Model:
             return
 
         amount_of_curves = len(self.figure.gca().get_lines())
-        if not index in range(-(index-1), index+1):
+        if not index in range(-(index - 1), index + 1):
             raise IndexError("there is no curve with such index to delete")
 
         self.figure.gca().get_lines()[index - 1].remove()
-
 
     def show(self):
         """
@@ -176,6 +175,7 @@ class Model:
         plt.xlabel(self.xlabel)
         plt.ylabel(self.ylabel)
         plt.title(self.title)
+        plt.grid()
         if not self.xlim is None:
             plt.xlim(self.xlim)
 
