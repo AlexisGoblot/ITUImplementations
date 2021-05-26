@@ -4,6 +4,7 @@ import numpy as np
 from PIL import Image
 import io
 import tkinter.ttk as ttk
+from pprint import pprint
 
 
 class Model:
@@ -74,6 +75,23 @@ class Model:
             plt.figure(self.figure.number)
 
         plt.plot(x, y, label=label)
+
+    def delete_last_curve(self):
+        if self.figure is None:
+            return
+
+        self.delete_curve(len(self.figure.gca().get_lines()))
+
+    def delete_curve(self, index: int):
+        if self.figure is None:
+            return
+
+        amount_of_curves = len(self.figure.gca().get_lines())
+        if not index in range(-(index-1), index+1):
+            raise IndexError("there is no curve with such index to delete")
+
+        self.figure.gca().get_lines()[index - 1].remove()
+
 
     def show(self):
         """

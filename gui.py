@@ -164,6 +164,11 @@ class DisplayZone(CustomWidget):
         # definition of the buttons
         self.btn_draw = tk.Button(self.frame, text="Draw", command=self.draw)
         self.btn_clear = tk.Button(self.frame, text="Clear", command=self.clear)
+        self.btn_delete_last = tk.Button(self.frame, text="Delete last curve", command=self.delete_last)
+        self.btn_delete = tk.Button(self.frame, text="Delete selected curve", command=self.delete)
+
+        # definition of the  combo box for the selection of the curve to delete it
+        self.combo_box_curve_deletion = tk.ttk.Combobox(self.frame)
 
         # display of the widgets
         self.canvas.grid(row=20, column=1, columnspan=self.MAX_PARAM_COLUMNS)
@@ -175,6 +180,9 @@ class DisplayZone(CustomWidget):
 
         # self.btn_draw.grid(row=self.row_index_init + 1, column=self.MAX_PARAM_COLUMNS + 1)
         # self.btn_clear.grid(row=self.row_index_init + 2, column=self.MAX_PARAM_COLUMNS + 1)
+        # self.btn_delete_last.grid(row=self.row_index_init + 3, column=self.MAX_PARAM_COLUMNS + 1)
+        # self.combo_box_curve_deletion.grid(row=self.row_index_init + 4, column=self.MAX_PARAM_COLUMNS + 1)
+        # self.btn_delete.grid(row=self.row_index_init + 5, column=self.MAX_PARAM_COLUMNS + 1)
         # self.label_parameters.grid(row=self.row_index_init - 1, column=self.column_index_init,
         #                            columnspan=self.MAX_PARAM_COLUMNS)
 
@@ -194,6 +202,7 @@ class DisplayZone(CustomWidget):
                 # itu model index starts at 1
                 self.current_itu_model = self.get_itu_command().models[sel + 1]
                 self.update()
+                self.clear()
             except IndexError:
                 pass  # todo: make a proper handling instead of dumb try/except clauses
 
@@ -214,10 +223,16 @@ class DisplayZone(CustomWidget):
         # updating these widgets:
         self.btn_draw.grid_forget()
         self.btn_clear.grid_forget()
+        self.btn_delete_last.grid_forget()
+        self.combo_box_curve_deletion.grid_forget()
+        self.btn_delete.grid_forget()
         self.label_parameters.grid_forget()
 
         self.btn_draw.grid(row=self.row_index_init + 1, column=self.MAX_PARAM_COLUMNS + 1)
         self.btn_clear.grid(row=self.row_index_init + 2, column=self.MAX_PARAM_COLUMNS + 1)
+        self.btn_delete_last.grid(row=self.row_index_init + 3, column=self.MAX_PARAM_COLUMNS + 1)
+        self.combo_box_curve_deletion.grid(row=self.row_index_init + 4, column=self.MAX_PARAM_COLUMNS + 1)
+        self.btn_delete.grid(row=self.row_index_init + 5, column=self.MAX_PARAM_COLUMNS + 1)
         self.label_parameters.grid(row=self.row_index_init - 1, column=self.column_index_init,
                                    columnspan=self.MAX_PARAM_COLUMNS)
 
@@ -325,21 +340,53 @@ class DisplayZone(CustomWidget):
 
             # evaluating and drawing the image inside the canvas
             self.current_itu_model.evaluate(plot=True, **{k: v[0] for k, v in parameters_desc.items()})
-            im = self.current_itu_model.get_image()
-            size = im.size
-            self.current_image = ImageTk.PhotoImage(image=im)
-            self.canvas.create_image(size, image=self.current_image, anchor="se")  # anchor inverted, i don't know why
+            self.update_image()
+
+    def update_image(self):
+        if self.current_itu_model.figure is None:
+            return
+
+        # refreshing the image
+        im = self.current_itu_model.get_image()
+        self.current_image = ImageTk.PhotoImage(image=im)
+        self.canvas.im_id = self.canvas.create_image(im.size, image=self.current_image, anchor="se")
+        self.populate_combobox_removal()
+
+    def populate_combobox_removal(self):
+        figure = self.current_itu_model.figure
+        if figure is None:
+            return
+
+        values = [f"{i + 1}) " + line.get_label() for i, line in enumerate(figure.gca().get_lines())]
+        if len(values) == 0:
+            values = [""]
+        self.combo_box_curve_deletion.configure(values=values)
+        self.combo_box_curve_deletion.current(0)
 
     def clear(self):
         """method used to removing the current curves on the current image of the current model"""
         if not self.current_itu_model is None:
             # clearing the internal image of the model
             self.current_itu_model.clear()
+            self.update_image()
 
-            # refreshing the image
-            im = self.current_itu_model.get_image()
-            self.current_image = ImageTk.PhotoImage(image=im)
-            self.canvas.im_id = self.canvas.create_image(im.size, image=self.current_image, anchor="se")
+    def delete_last(self):
+        try:
+            self.current_itu_model.delete_last_curve()
+            self.update_image()
+        except IndexError:
+            pass
+
+    def delete(self):
+        selected_value = self.combo_box_curve_deletion.get()
+        if selected_value == "":  # if this is called when the combobox is empty
+            return
+
+        selected_index = int(selected_value.split(")")[0])
+        self.current_itu_model.delete_curve(selected_index)
+        self.update_image()
+        self.populate_combobox_removal()
+        self.combo_box_curve_deletion.update()
 
 
 class Gui:
