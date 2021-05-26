@@ -428,6 +428,7 @@ class PlotAdditionWindow:
         self.current_itu_model = current_itu_model
         self.root_widget = root_widget
         self.toplevel = tk.Toplevel(self.root_widget.master)
+        self.toplevel.title("Plot addition")
 
         # catching the windows destruction event and binding a method on this event
         self.toplevel.protocol('WM_DELETE_WINDOW', self.unbind)
@@ -439,7 +440,7 @@ class PlotAdditionWindow:
 
         # various internal parameters
         self.entry_width = 50
-        self.column_start_index = 0
+        self.row_start_index = 0
 
         # creation of labels
         self.label_x = tk.Label(self.toplevel, text="X array")
