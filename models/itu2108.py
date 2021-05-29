@@ -1,4 +1,28 @@
 # -*- coding: utf-8 -*-
+
+# MIT License
+# 
+# Copyright (c) 2021 Guillaume Evain, Alexis Goblot, Luc Gorjux and Thomas Lebreton
+#                    Students at ESIR (Rennes) 
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 import numpy as np
 import scipy.stats as st
 from models.base_classes import ITU, Model
@@ -12,37 +36,7 @@ def cotg(x):
 class ITU2108(ITU):
     """
     
-    Unitary test:
-        
-    >>> itu = ITU2108()
-    >>> itu.models[1].show()
-    Traceback (most recent call last):
-    ...
-    TypeError: Figure pas encore initialisée, il n'y a rien à afficher
-    >>> itu.models[2].show()
-    Traceback (most recent call last):
-    ...
-    TypeError: Figure pas encore initialisée, il n'y a rien à afficher
-    >>> itu.models[3].show()
-    Traceback (most recent call last):
-    ...
-    TypeError: Figure pas encore initialisée, il n'y a rien à afficher
-    >>> itu.models[2].evaluate(f = 0)
-    Traceback (most recent call last):
-    ...
-    ValueError: la fréquence doit être comprise entre 2 et 67 GHz
-    >>> itu.models[2].evaluate(f = 110)
-    Traceback (most recent call last):
-    ...
-    ValueError: la fréquence doit être comprise entre 2 et 67 GHz
-    >>> itu.models[3].evaluate(f = 0)
-    Traceback (most recent call last):
-    ...
-    ValueError: la fréquence doit être comprise entre 10 et 100 GHz
-    >>> itu.models[3].evaluate(f = 110)
-    Traceback (most recent call last):
-    ...
-    ValueError: la fréquence doit être comprise entre 10 et 100 GHz
+    This is the class that implements the ITU 2108 recommendation
     
     """
 
